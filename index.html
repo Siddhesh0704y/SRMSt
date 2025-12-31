@@ -1,0 +1,257 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Student Result Management System</title>
+
+<style>
+/* ---------- GLOBAL ---------- */
+body{
+  margin:0;
+  font-family:"Segoe UI",system-ui,sans-serif;
+  background:#0f172a;
+  color:#e5e7eb;
+}
+.page{display:none;padding:30px}
+.page.active{display:block}
+button{
+  padding:10px 16px;
+  background:#2563eb;
+  border:none;
+  color:#fff;
+  font-weight:600;
+  cursor:pointer;
+}
+input{
+  padding:9px;
+  width:100%;
+  margin:6px 0;
+}
+.card{
+  max-width:1000px;
+  margin:auto;
+  background:#020617;
+  padding:25px;
+  border-radius:12px;
+}
+
+/* ---------- TABLE ---------- */
+table{
+  width:100%;
+  border-collapse:collapse;
+  margin-top:10px;
+  background:#fff;
+  color:#000;
+  font-family:"Times New Roman",serif;
+}
+th,td{
+  border:1px solid #000;
+  padding:6px;
+  text-align:center;
+}
+th{background:#f1f1f1}
+.left{text-align:left}
+
+/* ---------- MSBTE RESULT ---------- */
+.marksheet{
+  background:#fff;
+  color:#000;
+  padding:25px;
+  border:2px solid #000;
+  font-family:"Times New Roman",serif;
+}
+.header{text-align:center}
+.header h2{margin:0;font-size:22px}
+.header h3{margin:4px 0}
+.info{margin:12px 0;font-size:14px}
+.info div{margin:3px 0}
+
+@media print{
+  body{background:#fff}
+  button,input{display:none}
+}
+</style>
+</head>
+
+<body>
+
+<!-- LOGIN PAGE (TEACHER + STUDENT) -->
+<section class="page active" id="loginPage">
+<div class="card">
+<h2>Login</h2>
+
+<h3>Teacher Login</h3>
+<input id="tuser" placeholder="Username">
+<input id="tpass" type="password" placeholder="Password">
+<button onclick="teacherLogin()">Login as Teacher</button>
+
+<hr>
+
+<h3>Student Result View</h3>
+<input id="senroll" placeholder="Enrollment No">
+<input id="sseat" placeholder="Seat No">
+<button onclick="studentLogin()">View Result</button>
+</div>
+</section>
+
+<!-- SUBJECT MASTER -->
+<section class="page" id="subjectPage">
+<div class="card">
+<h2>Subject Master (Create Once)</h2>
+
+<input id="sub" placeholder="Subject Name">
+<input id="thmax" placeholder="Theory Max">
+<input id="prmax" placeholder="Practical Max">
+<button onclick="addSubject()">Add Subject</button>
+
+<table id="subTable">
+<tr><th>Subject</th><th>TH Max</th><th>PR Max</th></tr>
+</table>
+
+<button onclick="goBulk()">Create Bulk Results</button>
+</div>
+</section>
+
+<!-- BULK RESULT ENTRY -->
+<section class="page" id="bulkPage">
+<div class="card">
+<h2>Bulk Result Entry</h2>
+
+<input id="sname" placeholder="Student Name">
+<input id="enroll" placeholder="Enrollment No">
+<input id="seat" placeholder="Seat No">
+
+<table id="marksTable">
+<tr><th>Subject</th><th>TH</th><th>PR</th></tr>
+</table>
+
+<button onclick="saveResult()">Save Student Result</button>
+<button onclick="clearStudent()">Next Student</button>
+<button onclick="finish()">Finish</button>
+</div>
+</section>
+
+<!-- RESULT VIEW -->
+<section class="page" id="resultPage">
+<div class="card">
+<div class="marksheet" id="marksheet"></div>
+<button onclick="window.print()">Save / Export PDF</button>
+</div>
+</section>
+
+<script>
+let subjects=[];
+let results={};
+
+/* NAV */
+function show(id){
+  document.querySelectorAll(".page").forEach(p=>p.classList.remove("active"));
+  document.getElementById(id).classList.add("active");
+}
+
+/* LOGIN */
+function teacherLogin(){
+  if(tuser.value==="teacher" && tpass.value==="teacher123"){
+    show("subjectPage");
+  }else alert("Invalid teacher login");
+}
+function studentLogin(){
+  let key=senroll.value+"_"+sseat.value;
+  if(results[key]) renderResult(results[key]);
+  else alert("Result not found");
+}
+
+/* SUBJECT MASTER */
+function addSubject(){
+  subjects.push({name:sub.value,th:thmax.value,pr:prmax.value});
+  subTable.innerHTML+=`<tr><td>${sub.value}</td><td>${thmax.value}</td><td>${prmax.value}</td></tr>`;
+  sub.value=thmax.value=prmax.value="";
+}
+
+/* BULK ENTRY */
+function goBulk(){
+  let t=document.getElementById("marksTable");
+  t.innerHTML="<tr><th>Subject</th><th>TH</th><th>PR</th></tr>";
+  subjects.forEach((s,i)=>{
+    t.innerHTML+=`<tr>
+      <td class="left">${s.name}</td>
+      <td><input id="th${i}"></td>
+      <td><input id="pr${i}"></td>
+    </tr>`;
+  });
+  show("bulkPage");
+}
+
+function saveResult(){
+  let total=0;
+  let rows="";
+  subjects.forEach((s,i)=>{
+    let th=Number(document.getElementById("th"+i).value||0);
+    let pr=Number(document.getElementById("pr"+i).value||0);
+    total+=th+pr;
+    rows+=`<tr>
+      <td class="left">${s.name}</td>
+      <td>${s.th}</td><td>${th}</td>
+      <td>${s.pr}</td><td>${pr}</td>
+    </tr>`;
+  });
+
+  results[enroll.value+"_"+seat.value]={
+    name:sname.value,
+    enroll:enroll.value,
+    seat:seat.value,
+    rows:rows,
+    total:total
+  };
+  alert("Result saved");
+}
+
+function clearStudent(){
+  sname.value=enroll.value=seat.value="";
+  subjects.forEach((_,i)=>{
+    document.getElementById("th"+i).value="";
+    document.getElementById("pr"+i).value="";
+  });
+}
+
+/* RESULT */
+function renderResult(r){
+  marksheet.innerHTML=`
+  <div class="header">
+    <h2>MAHARASHTRA STATE BOARD OF TECHNICAL EDUCATION</h2>
+    <h3>STATEMENT OF MARKS</h3>
+  </div>
+
+  <div class="info">
+    <div><b>Name:</b> ${r.name}</div>
+    <div><b>Enrollment No:</b> ${r.enroll}</div>
+    <div><b>Seat No:</b> ${r.seat}</div>
+    <div><b>Programme:</b> Diploma in Computer Engineering</div>
+  </div>
+
+  <table>
+    <tr>
+      <th rowspan="2">Course</th>
+      <th colspan="2">Theory</th>
+      <th colspan="2">Practical</th>
+    </tr>
+    <tr>
+      <th>Max</th><th>Obt</th>
+      <th>Max</th><th>Obt</th>
+    </tr>
+    ${r.rows}
+  </table>
+
+  <p><b>Total Marks:</b> ${r.total}</p>
+  <p><b>Result:</b> ${r.total>=40?"PASS":"FAIL"}</p>
+  `;
+  show("resultPage");
+}
+
+function finish(){
+  show("loginPage");
+}
+</script>
+
+</body>
+</html>
